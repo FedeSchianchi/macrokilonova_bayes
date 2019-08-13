@@ -80,8 +80,8 @@ def abscos_velocity_distribution(angles_array, **kwargs):
 
 def step_velocity_distribution(angles_array, **kwargs):
     step_angle_vel   = kwargs['step_angle_vel']
-    high_lat_vel = kwargs['high_lat_vel']
-    low_lat_vel  = kwargs['low_lat_vel']
+    high_lat_vel = kwargs['min_vel']
+    low_lat_vel  = kwargs['max_vel']
     if step_angle_vel is None:
         print("Error! Must specify a step angle in radians! exiting\n")
         exit(-1)

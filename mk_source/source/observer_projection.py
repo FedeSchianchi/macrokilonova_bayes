@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.interpolate import InterpolatedUnivariateSpline
 
+
 class ObserverProjection(object):
 
     def __init__(self, n_slices, dist_slices):

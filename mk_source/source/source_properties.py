@@ -1,5 +1,6 @@
 import numpy as np
 import units
+import math
 
 class SourceProperties(object):
 
@@ -20,7 +21,7 @@ class SourceProperties(object):
 
         elif (source_label == 'AT2017gfo'):
             self.D = 40.e+6*units.pc2cm
-            self.view_angle = 30.
+            self.view_angle = math.degrees(np.pi*7./36)
             self.filter_data_folder='filter_data_AT2017gfo'
             self.t0 = 57982.529
 
@@ -29,7 +30,7 @@ class SourceProperties(object):
             print('please specify a source or default')
             exit()
 
-    def init_time(self,tscale,time_min,time_max,n_time,mag):  
+    def init_time(self, tscale, time_min, time_max, n_time, mag):
         if (tscale == 'linear'):
             time = np.linspace(time_min,time_max,num=n_time)
         elif (tscale == 'log'):
@@ -58,7 +59,7 @@ class SourceProperties(object):
             exit(-1)
         return np.array(time)
 
-    def time_measures(self,mag,toll):
+    def time_measures(self, mag, toll):
         
         all_time = []
         for ilambda in mag.keys():
@@ -78,4 +79,3 @@ class SourceProperties(object):
                 break
         time = sorted(np.array(time)*units.day2sec)
         return np.array(time)
-

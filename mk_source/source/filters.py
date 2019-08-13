@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import dered_cardelli as drd
 import units
 
+
 # CORRECTION FOR REDDENING: if 'True' uses 'dered_cardelli' module to correct data for reddening.
 dered_correction = True
 
@@ -137,6 +138,7 @@ def calc_magnitudes(ff,time,rad_ray,T_ray,lambda_vec,dic_filt,D,t0):
             mag_model[ilambda] = np.array([m_filter(dic_filt[ilambda]["lambda"],T,R,D,ff) for T,R in zip(ordered_T,ordered_R)])
     return mag_model 
 
+
 def calc_residuals(data,model,t0):
     res = {}
     for ilambda in data.keys():
@@ -149,28 +151,55 @@ def calc_residuals(data,model,t0):
     return res
 
 
-
-def calc_all_residuals(ff,time,rad_ray,T_ray,lambda_vec,dic_filt,D,t0,data):
+def calc_all_residuals( ff, time, rad_ray, T_ray, lambda_vec, dic_filt, D, t0, data , weight):
 
     res = {}
-    for ilambda in lambda_vec:
-        if (dic_filt[ilambda]["active"]==0):
-            continue
-        if (len(data[ilambda]['time'])==0):
-            continue
+    errs = {}
 
-#  here time delay must be implemented
-        R_intrp = np.array([np.interp((data[ilambda]['time']-t0)*units.day2sec,time,x) for x in rad_ray])
-        T_intrp = np.array([np.interp((data[ilambda]['time']-t0)*units.day2sec,time,x) for x in T_ray])
+    if weight == 'const':
 
-        ordered_T = np.asarray([list(x) for x in zip(*T_intrp)])
-        ordered_R = np.asarray([list(x) for x in zip(*R_intrp)])
+        for ilambda in lambda_vec:
+            if (dic_filt[ilambda]["active"]==0):
+                continue
+            if (len(data[ilambda]['time'])==0):
+                continue
 
-        mag_model = np.array([m_filter(dic_filt[ilambda]["lambda"],x,y,D,ff) for x,y in zip(ordered_T,ordered_R) ])
+    #  here time delay must be implemented
+            R_intrp = np.array( [np.interp( (data[ilambda]['time']-t0)*units.day2sec,time,x) for x in rad_ray] )
+            T_intrp = np.array( [np.interp( (data[ilambda]['time']-t0)*units.day2sec,time,x) for x in T_ray] )
 
-        res[ilambda] = (mag_model-data[ilambda]['mag'])  /data[ilambda]['sigma']
+            ordered_T = np.asarray([list(x) for x in zip(*T_intrp)])
+            ordered_R = np.asarray([list(x) for x in zip(*R_intrp)])
 
-    return res
+            mag_model = np.array( [m_filter(dic_filt[ilambda]["lambda"],x,y,D,ff) for x,y in zip(ordered_T,ordered_R) ] )
+
+            res[ilambda] = (mag_model-data[ilambda]['mag'])  /data[ilambda]['sigma']
+            errs[ilambda] = abs(mag_model - data[ilambda]['mag']) / abs(mag_model)
+
+    elif weight == '1/t':
+
+        for ilambda in lambda_vec:
+            if (dic_filt[ilambda]["active"] == 0):
+                continue
+            if (len(data[ilambda]['time']) == 0):
+                continue
+
+            #  here time delay must be implemented
+            R_intrp = np.array([np.interp((data[ilambda]['time'] - t0) * units.day2sec, time, x) for x in rad_ray])
+            T_intrp = np.array([np.interp((data[ilambda]['time'] - t0) * units.day2sec, time, x) for x in T_ray])
+
+            ordered_T = np.asarray([list(x) for x in zip(*T_intrp)])
+            ordered_R = np.asarray([list(x) for x in zip(*R_intrp)])
+
+            mag_model = np.array(
+                [m_filter(dic_filt[ilambda]["lambda"], x, y, D, ff) for x, y in zip(ordered_T, ordered_R)])
+
+            w = sum( (data[ilambda]['time'] - t0)**-2 )
+
+            res[ilambda] = (mag_model - data[ilambda]['mag']) / data[ilambda]['sigma'] * (data[ilambda]['time'] - t0) ** -2 / w
+            errs[ilambda] = abs(mag_model - data[ilambda]['mag']) / abs(mag_model) * (data[ilambda]['time'] - t0) ** -2 / w
+
+    return (res, errs)
    
 if __name__=="__main__":
 
@@ -179,4 +208,3 @@ if __name__=="__main__":
 
     FT2 = Filters("measures") 
     dic_filt,lambda_vec,mag = FT2()
-

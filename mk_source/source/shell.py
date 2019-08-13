@@ -11,6 +11,7 @@ import scipy.integrate as integrate
 from expansion_model_single_spherical import ExpansionModelSingleSpherical
 import import_NR_data
 
+
 class Shell(object):
     """
     Ejecta shell class
@@ -31,7 +32,7 @@ class Shell(object):
         self.vel_dist        = velocity_angular_distribution.VelocityAngularDistribution(params['vel_dist'])
         self.op_dist         = opacity_angular_distribution.OpacityAngularDistribution(params['op_dist'])
         self.expansion_model = ExpansionModelSingleSpherical('GK')
-    
+
     def update(self, m_tot, angular_distribution,**kwargs):
         x = self.mass_dist(m_tot,angular_distribution,**kwargs)
         y = self.vel_dist(angular_distribution,**kwargs)
@@ -58,7 +59,7 @@ class Shell(object):
                                        shell_name,
                                        **kwargs):
                                        
-# assign the global model variables
+        # assign the global model variables
         v_law    = ejecta_params['v_law']
         v_min    = glob_params['v_min']
         n_v      = glob_params['n_v']
@@ -68,7 +69,7 @@ class Shell(object):
         t0eps    = glob_params['t0eps']
         cnst_eff = glob_params['cnst_eff']
 
-# assign the global variables
+        # assign the global variables
         eps0      = glob_vars['eps0']
         a_eps_nuc = glob_vars['a_eps_nuc']
         b_eps_nuc = glob_vars['b_eps_nuc']
@@ -81,24 +82,26 @@ class Shell(object):
         elif (ejecta_vars['xi_disk'] == None):
             m_tot = np.float(ejecta_vars['m_ej'])
 
-        if (glob_params['NR_data'] and shell_name == 'dynamics'):
-            print('I am here')
-            print(NR_data)
+
+        if (glob_params['NR_data'] and shell_name == 'bernoulli'):
+            #print('I am here')
             fname = glob_params['NR_filename']
-            self.ejected_mass,self.velocity_rms,self.opacity = import_NR_data.importNRprofiles(fname,angular_distribution)
+            self.ejected_mass, self.velocity_rms, self.opacity = import_NR_data.importNRprofiles(fname,angular_distribution)
             g = open('profile_NR.txt','w')
             for i in range(len(angular_distribution)):
-                g.write('%20s %20s %20s %20s \n' %(0.5*(angular_distribution[i][1]+angular_distribution[i][0]),self.ejected_mass[i],self.velocity_rms[i],self.opacity[i]))
+                g.write('%20s %20s %20s %20s \n' %(0.5*(angular_distribution[i][1]+angular_distribution[i][0]), self.ejected_mass[i],self.velocity_rms[i],self.opacity[i]))
             g.close()
+
         else: 
-            self.ejected_mass,self.velocity_rms,self.opacity = self.update(m_tot,angular_distribution,**ejecta_vars)#,**kwargs)
-            if (shell_name == 'dynamics'):
+            self.ejected_mass, self.velocity_rms, self.opacity = self.update(m_tot, angular_distribution, **ejecta_vars)  #,**kwargs)
+            if (shell_name == 'bernoulli'):
                 g = open('profile_noNR.txt','w')
                 for i in range(len(angular_distribution)):
                     g.write('%20s %20s %20s %20s \n' %(0.5*(angular_distribution[i][1]+angular_distribution[i][0]),self.ejected_mass[i],self.velocity_rms[i],self.opacity[i]))
                 g.close()
-            
-        self.ejected_mass,self.velocity_rms,self.opacity = self.update(m_tot,angular_distribution,**ejecta_vars)#,**kwargs)
+
+
+        #self.ejected_mass,self.velocity_rms,self.opacity = self.update(m_tot,angular_distribution,**ejecta_vars)#,**kwargs)
         self.physical_radius = []
         self.Lbol = []
        
@@ -227,7 +230,7 @@ class Shell(object):
                                               shell_name,
                                               **kwargs):
         
-# assign the global model variables
+        # assign the global model variables
         v_law    = ejecta_params['v_law']
         v_min    = glob_params['v_min']
         n_v      = glob_params['n_v']
@@ -237,7 +240,7 @@ class Shell(object):
         t0eps    = glob_params['t0eps']
         cnst_eff = glob_params['cnst_eff']
 
-# assign the global variables
+        # assign the global variables
         eps0      = glob_vars['eps0']
         a_eps_nuc = glob_vars['a_eps_nuc']
         b_eps_nuc = glob_vars['b_eps_nuc']

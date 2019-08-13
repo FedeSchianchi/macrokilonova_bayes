@@ -14,9 +14,9 @@ import bayes_prob as bayes
 import scipy.integrate as integrate
 
 
-# fitting function
+#fitting function
 def f(x, alpha, beta, gamma, delta):
-    return np.amax(np.array([1e-3, alpha + beta * np.tanh((x - gamma) / delta)]), axis=0)
+    return np.amax(np.array([1e-3, alpha+beta*np.tanh((x-gamma)/delta)]), axis=0)
 
 
 class MKN(object):
@@ -84,8 +84,8 @@ class MKN(object):
         self.glob_params   = glob_params
         self.glob_vars     = glob_vars
         self.ejecta_params = ejecta_params
-        self.ejecta_vars    = ejecta_vars
-#        self.ejecta        = ej.Ejecta(len(self.ejecta_params),self.ejecta_params.keys(),self.ejecta_params)
+        self.ejecta_vars   = ejecta_vars
+#        self.ejecta       = ej.Ejecta(len(self.ejecta_params),self.ejecta_params.keys(),self.ejecta_params)
 
         #print('I am initializing the components')
         self.E = ej.Ejecta(len(self.ejecta_params.keys()), self.ejecta_params.keys(), self.ejecta_params)
@@ -115,7 +115,7 @@ class MKN(object):
         # compute the residuals
         if (source_name != 'default'):
             #print('i.e., I am computing residuals')
-            (residuals, errs) = ft.calc_all_residuals(  self.flux_factor,  self.time,  r_ph,T_eff,  self.lambda_vec,  self.dic_filt,  self.D, self.t0,  self.mag, 'const' )
+            (residuals, errs) = ft.calc_all_residuals(  self.flux_factor,  self.time,  r_ph,T_eff,  self.lambda_vec,  self.dic_filt,  self.D, self.t0,  self.mag, 'const' ) #'const' or '1/t'
 
         # compute the likelihood
             #print('and then I am computing the likelihood')
@@ -132,7 +132,7 @@ class MKN(object):
 # write out the output  #
 #########################
 
-    def write_output(self,r_ph,T_eff,L_bol, i):
+    def write_output(self, r_ph,T_eff, L_bol, i):
 
         # compute the bolometric luminosity
         self.model_lum = ft.calc_lum_iso(L_bol, self.flux_factor)
@@ -201,28 +201,41 @@ if __name__=='__main__':
     os.mkdir('data_output')
     os.mkdir('mkn_output')
 
-    filename = 'params/models.csv'
+    filename = 'params/models_4comp.csv'   #tab containing data to be imported
 
-    params = pd.read_csv(filename)
-    params = params[params['reliable'] == True]
+    params= pd.read_csv(filename)
 
     N = len(params['name'].to_numpy())
 
-    # parameters from new fit
-    alpha1 = 9.035807380707361e-15
-    beta1 = 0.0998368736646533
-    gamma1 = 295.0367164875689
-    delta1 = 162.49822267566785
-
-    # Radice's parameters
-    alpha = 0.084
-    beta = 0.127
-    gamma = 567.1
-    delta = 405.14
+    write_output = False   #set True if you whant save the light curves
+    bern = 'Tab'  #'fit' for use m_bernoulli from Lambda by the fit
+    fit_disk = 'new'  #'new' for new fit, 'old' for Radice's fit
 
 
-    opacity = np.zeros(N)
-    mdisk = np.zeros(N)
+    if fit_disk == 'new':
+        # parameters from new fit
+        alpha = 9.035807380707361e-15
+        beta = 0.0998368736646533
+        gamma = 295.0367164875689
+        delta = 162.49822267566785
+
+    elif fit_disk == 'old':
+        # Radice's parameters
+        alpha = 0.084
+        beta = 0.127
+        gamma = 567.1
+        delta = 405.14
+
+    if bern == 'fit':
+        # m_bern fit parameters
+        a_bern = 1.1567870e-05
+        b_bern = -1.7261556e-03
+        m_bern = params['Lambda'].to_numpy()*a_bern+b_bern
+
+    # evaluating opacity and Mdisk arrays from data in the tab
+    opacity = {}
+    opacity_bern = {}
+    mdisk = {}
 
     if 'Yee' in params.keys():
         for k in range(N):
@@ -231,31 +244,38 @@ if __name__=='__main__':
             else:
                 opacity[k] = 30.
 
+    if 'Yeej_bern' in params.keys():
+        for k in range(N):
+            if params['Yeej_bern'][k] <= 0.25:
+                opacity_bern[k] = 30.
+            else:
+                opacity_bern[k] = 1.
+
+    #evaluate Mdisk from the fit when we don't have it
     if ( 'Lambda' in params.keys() and 'Mdisk' in params.keys() ):
         for k in range(N):
-            if params['Mdisk'][k] >= 0:
-                mdisk[k] = params['Mdisk'][k]
+            if math.isnan(params['Mdisk'][k]):
+                mdisk[k] = f(params['Lambda'][k], alpha, beta, gamma, delta)
             else:
-                mdisk[k] = f(params['Lambda'][k], alpha1, beta1, gamma1, delta1)
+                mdisk[k] = params['Mdisk'][k]
 
-    # avaluating an array containing only Mdisk from the fitting formula
+    # evaluating an array containing only Mdisk from the fitting formula
     if 'Lambda' in params.keys():
         mdisk_fit = np.zeros(N)
-        for r in range((len(params['Lambda']))):
-            mdisk_fit[r] = f(params['Lambda'][r], alpha1, beta1, gamma1, delta1)
-
+        for r in range(N):
+            mdisk_fit[r] = f(params['Lambda'].to_numpy()[r], alpha, beta, gamma, delta)
 
 
     for i in range(N):
 
     #dictionary with the global parameters of the model
         glob_params = {'lc model'   :'grossman',    # model for the lightcurve (grossman or villar)
-                       'mkn model'  :'aniso3comp',    # possible choices: iso1comp, iso2comp, iso3comp, aniso1comp, aniso2comp, aniso3comp
+                       'mkn model'  :'aniso4comp',    # possible choices: iso1comp, iso2comp, iso3comp, iso4comp, aniso1comp, aniso2comp, aniso3comp, aniso4comp
                        'omega frac' :1.0,           # fraction of the solid angle filled by the ejecta
                        'rad shell'  :True,          # exclude the free streaming part
                        'v_min'      :1.e-7,         # minimal velocity for the Grossman model
                        'n_v'        :400,           # number of points for the Grossman model
-                       'vscale'     :'linear',      # scale for the velocity in the Grossman model
+                       'vscale'     :'linear',      # scale for the velocity in the Grossman model/home/federico/BitBucket_local/macrokilonova_bayes-master/mk_source/source/angular_distribution.py
                        'sigma0'     :0.11,          # parameter for the nuclear heating rate
                        'alpha'      :1.3,           # parameter for the nuclear heating rate
                        't0eps'      :1.3,           # parameter for the nuclear heating rate
@@ -267,14 +287,14 @@ if __name__=='__main__':
                        'n time'     :200,           # integer number of bins in time
                        'scale for t':'linear',    # kind of spacing in time [log - linear - measures]
                        'NR_data'    :False,         # use (True) or not use (False) NR profiles
-                       'NR_filename':'../example_NR_data/DD2_M125125_LK/outflow_1/ejecta_profile.dat'           # path of the NR profiles, necessary if NR_data is True
+                       'NR_filename':'../example_NR_data/' + str( params['name'][i] )          # path of the NR profiles, necessary if NR_data is True
                        }
 
         source_name = 'AT2017gfo'   # name of the source or "default"
         #source_name = 'default'   # name of the source or "default"
 
         # dictionary for the global variables
-        glob_vars = {'m_disk': mdisk_fit[i],        # mass of the disk [Msun], useful if the ejecta is expressed as a fraction of the disk mass
+        glob_vars = {'m_disk':  mdisk_fit[i],        # mass of the disk [Msun], useful if the ejecta is expressed as a fraction of the disk mass
                      'eps0':1.2e19,        # prefactor of the nuclear heating rate [erg/s/g]
                      'T_floor_LA':1000.,   # floor temperature for Lanthanides [K]
                      'T_floor_Ni':3500.,   # floor temperature for Nikel [K]
@@ -288,18 +308,19 @@ if __name__=='__main__':
 
         # hardcoded ejecta geometric and thermal parameters for the spherical case
         ejecta_params_iso = {}
-        ejecta_params_iso['dynamics'] = {'mass_dist':'uniform','vel_dist':'uniform','op_dist':'uniform','therm_model':'BKWM','eps_ye_dep':True,'v_law':'poly'}
-        ejecta_params_iso['wind']     = {'mass_dist':'uniform','vel_dist':'uniform','op_dist':'uniform','therm_model':'BKWM','eps_ye_dep':True,'v_law':'poly'}
-        ejecta_params_iso['secular']  = {'mass_dist':'uniform','vel_dist':'uniform','op_dist':'uniform','therm_model':'BKWM','eps_ye_dep':True,'v_law':'poly'}
+        ejecta_params_iso['dynamics']   = {'mass_dist':'uniform', 'vel_dist':'uniform', 'op_dist':'uniform', 'therm_model':'BKWM', 'eps_ye_dep':True, 'v_law':'poly'}
+        ejecta_params_iso['wind']       = {'mass_dist':'uniform', 'vel_dist':'uniform', 'op_dist':'uniform', 'therm_model':'BKWM', 'eps_ye_dep':True, 'v_law':'poly'}
+        ejecta_params_iso['secular']    = {'mass_dist':'uniform', 'vel_dist':'uniform', 'op_dist':'uniform', 'therm_model':'BKWM', 'eps_ye_dep':True, 'v_law':'poly'}
+        ejecta_params_iso['bernoulli']  = {'mass_dist':'uniform', 'vel_dist':'uniform', 'op_dist':'uniform', 'therm_model':'BKWM', 'eps_ye_dep':True, 'v_law':'poly'}
 
         # set of shell parameters to be sampled on
         ejecta_vars_iso={}
 
-        ejecta_vars_iso['dynamics'] = {'xi_disk'        :None,
-                                      'm_ej'           :params['Mej'][i],
+        ejecta_vars_iso['dynamics'] = {'xi_disk'       :None,
+                                      'm_ej'           :None,#params['Mej'][i],
                                       'step_angle_mass':None,
                                       'high_lat_flag'  :None,
-                                      'central_vel'    :params['vej'][i],
+                                      'central_vel'    :None,#params['vej'][i],
                                       'high_lat_vel'   :None,
                                       'low_lat_vel'    :None,
                                       'step_angle_vel' :None,
@@ -321,8 +342,8 @@ if __name__=='__main__':
                                      'high_lat_op'    :None,
                                      'step_angle_op'  :None}
 
-        ejecta_vars_iso['wind'] = {'xi_disk'       :None,
-                                  'm_ej'           :0.2,
+        ejecta_vars_iso['wind'] = {'xi_disk'       :0.2,
+                                  'm_ej'           :None,
                                   'step_angle_mass':None,
                                   'high_lat_flag'  :True,
                                   'central_vel'    :0.067,
@@ -333,15 +354,30 @@ if __name__=='__main__':
                                   'low_lat_op'     :5.0,
                                   'step_angle_op'  :np.pi/4.}
 
+        ejecta_vars_iso['bernoulli'] = {'xi_disk'       :None,
+                                       'm_ej'           :0.00324,
+                                       'step_angle_mass':None,
+                                       'high_lat_flag'  :None,
+                                       'central_vel'    :0.15073161990537148,
+                                       'high_lat_vel'   :None,
+                                       'low_lat_vel'    :None,
+                                       'step_angle_vel' :None,
+                                       'central_op'     :1.,
+                                       'high_lat_op'    :None,
+                                       'low_lat_op'     :None,
+                                       'step_angle_op'  :None}
+
+
     #################################
     # Template for anisotropic case #
     #################################
 
         # hardcoded ejecta geometric and thermal parameters for the aspherical case
         ejecta_params_aniso = {}
-        ejecta_params_aniso['dynamics'] = {'mass_dist':'sin2', 'vel_dist':'uniform', 'op_dist':'step'   ,'therm_model':'BKWM','eps_ye_dep':True,'v_law':'poly'}
-        ejecta_params_aniso['wind']     = {'mass_dist':'step', 'vel_dist':'uniform', 'op_dist':'step'   ,'therm_model':'BKWM','eps_ye_dep':True,'v_law':'poly'}
-        ejecta_params_aniso['secular']  = {'mass_dist':'sin2', 'vel_dist':'uniform', 'op_dist':'uniform','therm_model':'BKWM','eps_ye_dep':True,'v_law':'poly'}
+        ejecta_params_aniso['dynamics']   = {'mass_dist':'sin2', 'vel_dist':'uniform', 'op_dist':'step',    'therm_model':'BKWM', 'eps_ye_dep':True, 'v_law':'poly'}
+        ejecta_params_aniso['wind']       = {'mass_dist':'step', 'vel_dist':'uniform', 'op_dist':'step',    'therm_model':'BKWM', 'eps_ye_dep':True, 'v_law':'poly'}
+        ejecta_params_aniso['secular']    = {'mass_dist':'sin2', 'vel_dist':'uniform', 'op_dist':'uniform', 'therm_model':'BKWM', 'eps_ye_dep':True, 'v_law':'poly'}
+        ejecta_params_aniso['bernoulli']  = {'mass_dist':'sin2', 'vel_dist':'uniform', 'op_dist':'uniform', 'therm_model':'BKWM', 'eps_ye_dep':True, 'v_law':'poly'}
 
         # set of shell parameters to be sampled on
         ejecta_vars_aniso={}
@@ -385,6 +421,19 @@ if __name__=='__main__':
                                     'low_lat_op'     :5.0,
                                     'step_angle_op'  :np.pi/4.}
 
+        ejecta_vars_aniso['bernoulli'] = {'xi_disk'      :None,
+                                        'm_ej'           :0.003024, #m_bern[i],#params['Mej_bern'][i],
+                                        'step_angle_mass':None,
+                                        'high_lat_flag'  :None,
+                                        'central_vel'    :0.15073161990537148,
+                                        'min_vel'        :1e-5,
+                                        'max_vel'        :None,#params['vej_bern'][i],
+                                        'step_angle_vel' :None,#math.radians(params['ThetaRMS_bern'][i]),
+                                        'central_op'     :1.,#opacity_bern[i],
+                                        'high_lat_op'    :30.,
+                                        'low_lat_op'     :1.,
+                                        'step_angle_op'  :0.8}
+
 
     ##########################################################
     # choose the appropriate set of parameters and variables #
@@ -394,22 +443,36 @@ if __name__=='__main__':
             ejecta_params = {}
             ejecta_vars = {}
             ejecta_params['dynamics'] = ejecta_params_iso['dynamics']
-            ejecta_vars['dynamics']    = ejecta_vars_iso['dynamics']
+            ejecta_vars['dynamics']   = ejecta_vars_iso['dynamics']
+
         elif (glob_params['mkn model'] == 'iso2comp'):
             ejecta_params = {}
             ejecta_vars = {}
             ejecta_params['dynamics'] = ejecta_params_iso['dynamics']
-            ejecta_vars['dynamics']    = ejecta_vars_iso['dynamics']
+            ejecta_vars['dynamics'] = ejecta_vars_iso['dynamics']
             ejecta_params['secular'] = ejecta_params_iso['secular']
-            ejecta_vars['secular']    = ejecta_vars_iso['secular']
+            ejecta_vars['secular'] = ejecta_vars_iso['secular']
+
         elif (glob_params['mkn model'] == 'iso3comp'):
+            ejecta_params = {}
+            ejecta_vars = {}
+            ejecta_params['dynamics'] = ejecta_params_iso['dynamics']
+            ejecta_vars['dynamics'] = ejecta_vars_iso['dynamics']
+            ejecta_params['secular'] = ejecta_params_iso['secular']
+            ejecta_vars['secular'] = ejecta_vars_iso['secular']
+            ejecta_params['wind'] = ejecta_params_iso['wind']
+            ejecta_vars['wind'] = ejecta_vars_iso['wind']
+
+        elif (glob_params['mkn model'] == 'iso4comp'):
             ejecta_params = ejecta_params_iso
-            ejecta_vars    = ejecta_vars_iso
+            ejecta_vars = ejecta_vars_iso
+
         elif (glob_params['mkn model'] == 'aniso1comp'):
             ejecta_params = {}
             ejecta_vars = {}
             ejecta_params['dynamics'] = ejecta_params_aniso['dynamics']
             ejecta_vars['dynamics']    = ejecta_vars_aniso['dynamics']
+
         elif (glob_params['mkn model'] == 'aniso2comp'):
             ejecta_params = {}
             ejecta_vars = {}
@@ -417,9 +480,20 @@ if __name__=='__main__':
             ejecta_vars['dynamics']    = ejecta_vars_aniso['dynamics']
             ejecta_params['secular'] = ejecta_params_aniso['secular']
             ejecta_vars['secular']    = ejecta_vars_aniso['secular']
+
         elif (glob_params['mkn model'] == 'aniso3comp'):
+            ejecta_params = {}
+            ejecta_vars = {}
+            ejecta_params['dynamics'] = ejecta_params_aniso['dynamics']
+            ejecta_vars['dynamics']    = ejecta_vars_aniso['dynamics']
+            ejecta_params['secular'] = ejecta_params_aniso['secular']
+            ejecta_vars['secular']    = ejecta_vars_aniso['secular']
+            ejecta_params['wind'] = ejecta_params_aniso['wind']
+            ejecta_vars['wind'] = ejecta_vars_aniso['wind']
+
+        elif (glob_params['mkn model'] == 'aniso4comp'):
             ejecta_params = ejecta_params_aniso
-            ejecta_vars    = ejecta_vars_aniso
+            ejecta_vars = ejecta_vars_aniso
 
 
         #print('I am initializing the model')
@@ -439,14 +513,15 @@ if __name__=='__main__':
         (chi2, err, ndata) =  model.log_likelihood(r_ph,T_eff)
 
 
-        write_output = True
         if (write_output):
             #print('I am printing out the output')
             model.write_output(r_ph,T_eff,L_bol, str(i))
 
+        #p = 1. - integrate.quad( bayes.density_of_probability1, 0.1, chi2, args=(ndata) )[0]
 
-        params['chi2'][i]=chi2
+        params['chi2'][i] = chi2
         print(params['name'][i], chi2)
 
-model.write_data()
-params.to_csv(filename)
+    model.write_data()
+    params = params.drop(columns=['Unnamed: 0'])
+    params.to_csv(filename)
