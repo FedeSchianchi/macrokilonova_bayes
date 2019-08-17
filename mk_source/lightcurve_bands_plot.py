@@ -10,6 +10,8 @@ bands = ('g', 'z', 'Ks')
 l=len( par['name'] )
 l=l/9
 
+if os.path.exists('magnitude_plots/output_plots') == False:
+    os.mkdir('magnitude_plots/output_plots')
 
 for m in range( int(l) ):
 

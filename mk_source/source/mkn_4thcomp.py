@@ -201,13 +201,13 @@ if __name__=='__main__':
     os.mkdir('data_output')
     os.mkdir('mkn_output')
 
-    filename = 'params/models_4comp.csv'   #tab containing data to be imported
+    filename = 'params/models_4c_NRinfo.csv'   #tab containing data to be imported
 
     params= pd.read_csv(filename)
 
     N = len(params['name'].to_numpy())
 
-    write_output = False   #set True if you whant save the light curves
+    write_output = True   #set True if you whant save the light curves
     bern = 'Tab'  #'fit' for use m_bernoulli from Lambda by the fit
     fit_disk = 'new'  #'new' for new fit, 'old' for Radice's fit
 
@@ -286,7 +286,7 @@ if __name__=='__main__':
                        'time max'   :1036800./2,       # maximum time [s]
                        'n time'     :200,           # integer number of bins in time
                        'scale for t':'linear',    # kind of spacing in time [log - linear - measures]
-                       'NR_data'    :False,         # use (True) or not use (False) NR profiles
+                       'NR_data'    :True,         # use (True) or not use (False) NR profiles
                        'NR_filename':'../example_NR_data/' + str( params['name'][i] )          # path of the NR profiles, necessary if NR_data is True
                        }
 

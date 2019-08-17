@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 data_old = pd.read_csv('source/params/summary.csv')
-data_new = pd.read_csv('source/params/models.csv')
+data_new = pd.read_csv('source/params/models_3c.csv')
 
 xparam='Lambda'
 

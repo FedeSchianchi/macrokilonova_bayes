@@ -5,17 +5,12 @@ import math
 import os
 
 
-goodness_parameter = 'chi2'
+goodness_parameter = 'chi2_4c'
 
-par=pd.read_csv('source/params/models.csv')
+par=pd.read_csv('source/params/models_4c_NRinfo.csv')
 
 if os.path.exists('magnitude_plots/output_plots') == False:
     os.mkdir('magnitude_plots/output_plots')
-
-for i in range(len(par['name'])):
-    filepath = 'magnitude_plots/output_plots/' + str(par['name'][i]) + '_chi2=' + str(par[goodness_parameter][i])
-    if os.path.exists(filepath) == False:
-        os.mkdir(filepath)
 
 
 # list of bands you want to plot
@@ -31,6 +26,11 @@ for m in range(l):
     fig = plt.figure()
 
     if par[goodness_parameter][m] <= treshold:
+
+        filepath = 'magnitude_plots/output_plots/' + str(par['name'][m]) 
+        if os.path.exists(filepath) == False:
+            os.mkdir(filepath)
+
 
         model=pd.read_csv('source/mkn_output/mkn_model' + str(m) +'.txt', engine='python', sep=' ')
         t=model['time[s]'].to_numpy()/(3600*24)
@@ -77,5 +77,6 @@ for m in range(l):
         plt.xlabel( 'time (days)' )
         plt.ylabel( 'AB magnitude' )
         plt.legend(loc='lower left')
-        plt.savefig( 'magnitude_plots/output_plots/'+  str(par['name'][m]) + '_chi2=' + str(par[goodness_parameter][m]) + '/' + str( par['name'][m] ) + str( bands ) + 'chi=' + str( int( par[goodness_parameter][m] ) ) )
-        plt.show()
+        plt.savefig( 'magnitude_plots/output_plots/'+  str(par['name'][m]) + '/' + str( par['name'][m] ) + str( bands ) )
+        #plt.show()
+        plt.close()
