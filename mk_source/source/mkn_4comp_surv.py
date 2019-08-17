@@ -267,7 +267,7 @@ if __name__=='__main__':
                                'rad shell'  :True,          # exclude the free streaming part
                                'v_min'      :1.e-7,         # minimal velocity for the Grossman model
                                'n_v'        :400,           # number of points for the Grossman model
-                               'vscale'     :'linear',      # scale for the velocity in the Grossman model/home/federico/BitBucket_local/macrokilonova_bayes-master/mk_source/source/angular_distribution.py
+                               'vscale'     :'linear',      # scale for the velocity in the Grossman model
                                'sigma0'     :0.11,          # parameter for the nuclear heating rate
                                'alpha'      :1.3,           # parameter for the nuclear heating rate
                                't0eps'      :1.3,           # parameter for the nuclear heating rate
