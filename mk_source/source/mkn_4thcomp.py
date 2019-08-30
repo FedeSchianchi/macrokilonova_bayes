@@ -94,19 +94,18 @@ class MKN(object):
 #  LIKELIHOOD CALCULATION  #
 #############################
 
-    def compute_log_likelihood(self,residuals, errs):
+    def compute_log_likelihood(self,residuals, msm):
         # compute the likelihood
         chi2 = 0.
-        err = 0.
+
         ndata = 0.
         for ilambda in residuals.keys():
+
             for res in residuals[ilambda]:
                 chi2 += res*res
-            for error in errs[ilambda]:
-                err += error
                 ndata += 1
-        err = err / ndata
-        return (chi2, err, ndata)
+
+        return (chi2, msm, ndata)
 
     def log_likelihood(self,r_ph,T_eff):
 
@@ -115,18 +114,16 @@ class MKN(object):
         # compute the residuals
         if (source_name != 'default'):
             #print('i.e., I am computing residuals')
-            (residuals, errs) = ft.calc_all_residuals(  self.flux_factor,  self.time,  r_ph,T_eff,  self.lambda_vec,  self.dic_filt,  self.D, self.t0,  self.mag, 'const' ) #'const' or '1/t'
+            (residuals, msm) = ft.calc_all_residuals(  self.flux_factor,  self.time,  r_ph,T_eff,  self.lambda_vec,  self.dic_filt,  self.D, self.t0,  self.mag, 'const' ) #'const' or '1/t'
 
         # compute the likelihood
             #print('and then I am computing the likelihood')
-            (chi2, err, ndata) = self.compute_log_likelihood(residuals, errs)
-
-            #print('logL:',logL)
+            (chi2, msm, ndata) = self.compute_log_likelihood(residuals, msm)
 
         else:
             logL = 0.
 
-        return (chi2, err, ndata)
+        return (chi2, msm, ndata)
 
 #########################
 # write out the output  #
@@ -207,7 +204,7 @@ if __name__=='__main__':
 
     N = len(params['name'].to_numpy())
 
-    write_output = True   #set True if you whant save the light curves
+    write_output = False   #set True if you whant save the light curves
     bern = 'Tab'  #'fit' for use m_bernoulli from Lambda by the fit
     fit_disk = 'new'  #'new' for new fit, 'old' for Radice's fit
 
@@ -294,7 +291,7 @@ if __name__=='__main__':
         #source_name = 'default'   # name of the source or "default"
 
         # dictionary for the global variables
-        glob_vars = {'m_disk':  mdisk_fit[i],        # mass of the disk [Msun], useful if the ejecta is expressed as a fraction of the disk mass
+        glob_vars = {'m_disk':  mdisk_fit[i],    # mass of the disk [Msun], useful if the ejecta is expressed as a fraction of the disk mass
                      'eps0':1.2e19,        # prefactor of the nuclear heating rate [erg/s/g]
                      'T_floor_LA':1000.,   # floor temperature for Lanthanides [K]
                      'T_floor_Ni':3500.,   # floor temperature for Nikel [K]
@@ -510,17 +507,16 @@ if __name__=='__main__':
                                               model.glob_params)
 
         #print('I am computing the likelihood')
-        (chi2, err, ndata) =  model.log_likelihood(r_ph,T_eff)
+        (chi2, msm, ndata) =  model.log_likelihood(r_ph,T_eff)
 
 
         if (write_output):
             #print('I am printing out the output')
             model.write_output(r_ph,T_eff,L_bol, str(i))
 
-        #p = 1. - integrate.quad( bayes.density_of_probability1, 0.1, chi2, args=(ndata) )[0]
 
-        params['chi2'][i] = chi2
-        print(params['name'][i], chi2)
+        params['chi2'][i] = msm
+        print(params['name'][i], msm)
 
     model.write_data()
     params = params.drop(columns=['Unnamed: 0'])

@@ -154,7 +154,9 @@ def calc_residuals(data,model,t0):
 def calc_all_residuals( ff, time, rad_ray, T_ray, lambda_vec, dic_filt, D, t0, data , weight):
 
     res = {}
-    errs = {}
+    md = 0
+    mm = 0
+    dd = 0
 
     if weight == 'const':
 
@@ -173,8 +175,11 @@ def calc_all_residuals( ff, time, rad_ray, T_ray, lambda_vec, dic_filt, D, t0, d
 
             mag_model = np.array( [m_filter(dic_filt[ilambda]["lambda"],x,y,D,ff) for x,y in zip(ordered_T,ordered_R) ] )
 
-            res[ilambda] = (mag_model-data[ilambda]['mag'])  /data[ilambda]['sigma']
-            errs[ilambda] = abs(mag_model - data[ilambda]['mag']) / abs(mag_model)
+            res[ilambda] = (mag_model - data[ilambda]['mag'])  /data[ilambda]['sigma']
+
+            md += np.sum(mag_model * data[ilambda]['mag'] / data[ilambda]['sigma'])
+            mm += np.sum(mag_model**2/data[ilambda]['sigma'])
+            dd += np.sum(data[ilambda]['mag']**2/data[ilambda]['sigma'])
 
     elif weight == '1/t':
 
@@ -197,9 +202,14 @@ def calc_all_residuals( ff, time, rad_ray, T_ray, lambda_vec, dic_filt, D, t0, d
             w = sum( (data[ilambda]['time'] - t0)**-2 )
 
             res[ilambda] = (mag_model - data[ilambda]['mag']) / data[ilambda]['sigma'] * (data[ilambda]['time'] - t0) ** -2 / w
-            errs[ilambda] = abs(mag_model - data[ilambda]['mag']) / abs(mag_model) * (data[ilambda]['time'] - t0) ** -2 / w
 
-    return (res, errs)
+            md += np.sum(mag_model * data[ilambda]['mag']/ data[ilambda]['sigma'])
+            mm += np.sum(mag_model**2/data[ilambda]['sigma'])
+            dd += np.sum(data[ilambda]['mag']**2/data[ilambda]['sigma'])
+    
+    msm = 1 - md/np.sqrt(mm*dd)
+
+    return (res, msm)
    
 if __name__=="__main__":
 
